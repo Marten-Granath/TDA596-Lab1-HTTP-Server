@@ -2,6 +2,8 @@ module main/TDA596-Lab1-HTTP-Server
 
 go 1.25.4
 
-replace example.com/server => ../server
+//replace example.com/server => ../server
 
-require example.com/server v0.0.0-00010101000000-000000000000
+//require example.com/server v0.0.0-00010101000000-000000000000
+
+require golang.org/x/sync v0.18.0 // indirect
