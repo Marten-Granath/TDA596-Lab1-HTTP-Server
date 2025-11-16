@@ -56,8 +56,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"net/http"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -109,6 +111,7 @@ func awaitConnection(listener net.Listener) net.Conn {
 
 func handleClientRequest(connection net.Conn, number int) error {
 	fmt.Printf("Server handles client request %d from %s \n", number, connection.RemoteAddr().String())
+	
 	connection.Close()
 	return errors.New("Placeholder")
 }
@@ -150,8 +153,26 @@ func main() {
 
 	// TEMPORARY: Infinite loop to simulate a constant stream of requests
 	for {
-		net.Dial("tcp", GetLocalIP().String()+":2000")
-		fmt.Printf("Client sends request from %s \n", GetLocalIP().String())
-		time.Sleep(3 * time.Second)
+		//connection ,err := net.Dial("tcp", GetLocalIP().String()+":2000")
+		//if err != nil {
+		//	log.Fatal(err)
+		//}
+
+		resp, err := http.Get("https://localhost:2000")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		//We Read the response body on the line below.
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		resp.Body.Close()
+		//Convert the body to type string
+		sb := string(body)
+		log.Printf(sb)
+
+		//fmt.Printf("Client sends request from %s \n", GetLocalIP().String())
+		time.Sleep(15 * time.Second)
 	}
 }
