@@ -1,4 +1,4 @@
-module main/TDA596-Lab1-HTTP-Server
+module main/http_server
 
 go 1.25.4
 
