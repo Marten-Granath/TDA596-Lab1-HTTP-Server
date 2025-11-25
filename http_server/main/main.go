@@ -106,7 +106,7 @@ func initializeServer(port string) (string, *errgroup.Group, *map[string]FileDat
 	allowedExtensions := []string{}
 	allowedExtensions = append(allowedExtensions, "html", "txt", "css", "jpg", "jpeg", "gif")
 
-	fmt.Printf("Server initialized\n")
+	//fmt.Printf("Server initialized\n")
 	return port, goroutines, textMapPointer, imageMapPointer, allowedExtensions
 }
 
@@ -115,7 +115,7 @@ func startServer(port string) net.Listener {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Server begins to listen on address: %s \n", listener.Addr().String())
+	//fmt.Printf("Server begins to listen on address: %s \n", listener.Addr().String())
 	return listener
 }
 
@@ -124,7 +124,7 @@ func awaitConnection(listener net.Listener) net.Conn {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Server accepts client request on %s from %s \n", connection.LocalAddr().String(), connection.RemoteAddr().String())
+	//fmt.Printf("Server accepts client request on %s from %s \n", connection.LocalAddr().String(), connection.RemoteAddr().String())
 	return connection
 }
 
@@ -183,7 +183,7 @@ func handleGetRequest(request *http.Request, allowedExtensions []string, textMap
 	} else if (isMatching(fileName, (*textMapPointer)[fileName].ContentType) || isMatching(fileName, (*imageMapPointer)[fileName].ContentType)) == false {
 		response = buildErrorResponse("HTTP/1.1", "404 Not Found")
 	} else {
-		fmt.Println((*textMapPointer)["dog.jpg"])
+		//fmt.Println((*textMapPointer)["dog.jpg"])
 		for k := range *textMapPointer {
 			if fileName == k {
 				if (*textMapPointer)[fileName].ContentType == "txt" {
@@ -201,13 +201,13 @@ func handleGetRequest(request *http.Request, allowedExtensions []string, textMap
 				contentType = "image/" + (*imageMapPointer)[fileName].ContentType
 			}
 		}
-		if isValid(request.Header.Get("Content-Type"), allowedExtensions) {
-			response = buildErrorResponse("HTTP/1.1", "404 Not Found")
-		} else if body != nil {
-			response = buildGetResponse("HTTP/1.1", "200 OK", contentType, body)
-		} else {
-			response = buildErrorResponse("HTTP/1.1", "400 Bad Request")
-		}
+		// if isValid(request.Header.Get("Content-Type"), allowedExtensions) {
+		// 	response = buildErrorResponse("HTTP/1.1", "404 Not Found")
+		// } else if body != nil {
+		response = buildGetResponse("HTTP/1.1", "200 OK", contentType, body)
+		// } else {
+		// 	response = buildErrorResponse("HTTP/1.1", "400 Bad Request")
+		// }
 	}
 	return response
 }
@@ -224,10 +224,11 @@ func handlePostRequest(request *http.Request, allowedExtensions []string, textMa
 	if !isMatching(fileName, request.Header.Get("Content-Type")) {
 		response = buildErrorResponse("HTTP/1.1", "400 Bad Request")
 	} else {
+		// Post for text file
 		if slices.Contains(allowedExtensions[:3], request.Header.Get("Content-Type")) {
 			bodyBytes, err := io.ReadAll(request.Body)
 			if err != nil {
-				fmt.Println("error reading body:", err)
+				return buildErrorResponse("HTTP/1.1", "400 Bad Request")
 			}
 			var fd FileData
 			fd.Body = bodyBytes
@@ -235,10 +236,11 @@ func handlePostRequest(request *http.Request, allowedExtensions []string, textMa
 
 			(*textMapPointer)[fileName] = fd
 			response = buildResponse("HTTP/1.1", "200 OK", "text/"+request.Header.Get("Content-Type"))
+			// Post for image file
 		} else if slices.Contains(allowedExtensions[3:6], request.Header.Get("Content-Type")) {
 			bodyBytes, err := io.ReadAll(request.Body)
 			if err != nil {
-				fmt.Println("error reading body:", err)
+				return buildErrorResponse("HTTP/1.1", "400 Bad Request")
 			}
 			var fd FileData
 			fd.Body = bodyBytes
@@ -251,22 +253,19 @@ func handlePostRequest(request *http.Request, allowedExtensions []string, textMa
 			response = buildErrorResponse("HTTP/1.1", "400 Bad Request")
 		}
 	}
+
 	return response
 }
 
 func handleClientRequest(conn net.Conn, textMapPointer *map[string]FileData, imageMapPointer *map[string]FileData, allowedExtensions []string) error {
 	defer conn.Close()
-	fmt.Printf("Server handles client request from %s\n", conn.RemoteAddr().String())
-
+	//fmt.Printf("Server handles client request from %s\n", conn.RemoteAddr().String())
+	var response []byte
 	// Parse the HTTP request (allowed by assignment)
 	reader := bufio.NewReader(conn)
 	request, err := http.ReadRequest(reader)
-	if err != nil {
-		log.Println("Failed to parse HTTP request:", err)
-		return err
-	}
-	var response []byte
-	fmt.Printf("Server received %s request: %s\n", request.Method, request.Body)
+
+	//fmt.Printf("Server received %s request: %s\n", request.Method, request.Body)
 
 	// Handle different http methods
 	switch httpMethod := request.Method; httpMethod {
@@ -275,21 +274,21 @@ func handleClientRequest(conn net.Conn, textMapPointer *map[string]FileData, ima
 	case "POST":
 		response = handlePostRequest(request, allowedExtensions, textMapPointer, imageMapPointer)
 	case "HEAD":
-		fmt.Println("Server: 501 Not Implemented")
+		response = buildErrorResponse("HTTP/1.1", "501 Not Implemented")
 	case "PUT":
-		fmt.Println("Server: 501 Not Implemented")
+		response = buildErrorResponse("HTTP/1.1", "501 Not Implemented")
 	case "DELETE":
-		fmt.Println("Server: 501 Not Implemented")
+		response = buildErrorResponse("HTTP/1.1", "501 Not Implemented")
 	case "CONNECT":
-		fmt.Println("Server: 501 Not Implemented")
+		response = buildErrorResponse("HTTP/1.1", "501 Not Implemented")
 	case "OPTIONS":
-		fmt.Println("Server: 501 Not Implemented")
+		response = buildErrorResponse("HTTP/1.1", "501 Not Implemented")
 	case "TRACE":
-		fmt.Println("Server: 501 Not Implemented")
+		response = buildErrorResponse("HTTP/1.1", "501 Not Implemented")
 	case "PATCH":
-		fmt.Println("Server: 501 Not Implemented")
+		response = buildErrorResponse("HTTP/1.1", "501 Not Implemented")
 	default:
-		fmt.Println("400 Bad Request")
+		response = buildErrorResponse("HTTP/1.1", "400 Bad Request")
 	}
 
 	// Write response to connection
@@ -310,7 +309,7 @@ func main() {
 	// First command line argument is set as port
 	var port string = os.Args[1]
 
-	fmt.Printf("Server starts...\n")
+	//fmt.Printf("Server starts...\n")
 
 	// Server initialization
 	// * Variable definitions and assignments
